@@ -16,6 +16,7 @@ def add1(N):
 
 
 class Adder(Thread):
+
     def __init__(self, n, N):
         Thread.__init__(self)
         self.n = n
@@ -31,10 +32,14 @@ class Adder(Thread):
             printLock.release()
 
 
-N = 500
+N = 100
+
+
 a = Thread(target=add1, args=(N,))
 a2 = Adder(2, N)
 s2 = Adder(-2, N)
+
+
 a2.start()
 a.start()
 s2.start()

@@ -4,6 +4,7 @@ n = 0
 L = []
 global s
 sdf = 0
+
 listEv = Event()
 sumEv = Event()
 addEv = Event()
@@ -12,6 +13,7 @@ stopEv = Event()
 
 def copy():
     while True:
+        # listEv must me true
         listEv.wait(timeout=1)
         if stopEv.is_set():
             break
@@ -53,11 +55,14 @@ def add(N):
     print('Ending Add')
 
 
-N = 500
+N = 100
+
 a = Thread(target=add, args=(N,))
 c = Thread(target=copy)
 s = Thread(target=summe)
+
 a.start()
 c.start()
 s.start()
+
 addEv.set()

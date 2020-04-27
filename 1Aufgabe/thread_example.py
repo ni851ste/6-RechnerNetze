@@ -28,11 +28,11 @@ class Adder(Thread):
 
 maxCount = 100
 
-# a = Thread(target=add1, args=(maxCount,))
+a = Thread(target=add1, args=(maxCount,))
 a2 = Adder(1, maxCount)
 s2 = Adder(-1, maxCount)
 
 # start calls for the Threads own "run()" method
 a2.start()
-# a.start()
+a.start()
 s2.start()
