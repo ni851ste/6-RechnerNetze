@@ -1,5 +1,5 @@
 from heapq import heappop, heappush, heapify
-
+import itertools
 
 # Kunde Typ 1       interStation    Schlange zu lang    Einkauf Nummer
 # Baecker               10s             10                   10
@@ -20,39 +20,79 @@ from heapq import heappop, heappush, heapify
 # Tuple for EventQueue
 #       time, priority, number, function, opt(args)
 
+eventNumber = itertools.count()
+
+
+# TODO next(eventNumber)
+
 class Kunde:
 
     def __init__(self, id):
         self.id = id
-        self.nochBesuchendeStationen = []
-        self.bedientGerade = False
+        if id == 1 or True:
+            self.nochBesuchendeStationen = [(10, 10, 10),   #Baecker
+                                            (30, 10, 5),    #Wurst
+                                            (45, 5, 3),     #Kaese
+                                            (60, 20, 30)]   #Kasse
+            self.nochBesuchen = ["Baecker", "Kasse"]
+        else:
+            self.nochBesuchendeStationen = [(30, 5, 2),     #Wurst
+                                            (30, 20, 3),    #Kasse
+                                            (20, 20, 3)]    #Baecker
+
+    def startShopping(self):
+        # walk to Baeker
+        print("Customer" + str(self.id) + " startet shopping")
+        print("Customer" + str(self.id) + " finished shopping")
+
 
 
 class Station:
 
-    def __init__(self, name, abarbeitungsDauer):
-        self.name = name
-        self.abarbeitungsDauer = abarbeitungsDauer
-        self.warteSchlange = []
+    # TODO Make stations every its own instance
+    def __init__(self):
+        # self.name = name
+        self.abarbeitungsDauer = [10, 30, 60, 5]
+        self.warteSchlange = [[], [], [], []]
+        self.bedientGerade = [False, False, False, False]
+
+    def anstehen(self):
+
+        return
 
 
 class EventQueue:
+    #       time, priority, number, function, opt(args)
 
     def __init__(self):
-        self.queue = heapify([])
+        self.queue = []
+        self.time = 0
+        self.eventCount = 0
+
+    def push(self, event):
+        heappush(self.queue, event)
 
     def pop(self):
-        heappop(self.queue)
-
-    def push(self, arg):
-        heappush(self.queue, arg)
+        # returns Event
+        time, priority, eventNumber2, function, args = heappop(self.queue)
+        return time, priority, eventNumber2, function, args
 
     def start(self):
         kundeA1 = Kunde(1)
-        print(kundeA1.id)
+
+        self.push([0, 2, 1000, kundeA1.startShopping, []])
+        next(eventNumber)
+
+        # TODO watch out for maxtime while trouble
+        #   add max eventcount
+        #   add max Time
+        while len(self.queue) > 0 and True:
+            time, priority, eventNumber2, function, args = self.pop()
+            function()
+        print("The End has been reached")
+        return
 
 
+e = EventQueue()
 
-
-e = EventQueue
 e.start()
