@@ -30,61 +30,86 @@ class Kunde:
 
     def __init__(self, name, id):
         self.name = name
+        self.nextStation = []
         if id == 1:
-            self.nochBesuchendeStationen = [(10, 10, 10),   #Baecker
-                                            (30, 10, 5),    #Wurst
-                                            (45, 5, 3),     #Kaese
-                                            (60, 20, 30)]   #Kasse
+            self.nochBesuchendeStationen = [(10, 10, 10),  # Baecker
+                                            (30, 10, 5),  # Wurst
+                                            (45, 5, 3),  # Kaese
+                                            (60, 20, 30)]  # Kasse
             self.nochBesuchen = [0, 1, 2, 3]
         else:
-            self.nochBesuchendeStationen = [(20, 20, 3),    #Baecker
-                                            (30, 5, 2),     #Wurst
-                                            (0, 0, 0),      #Kaese
-                                            (30, 20, 3)]    #Kasse
+            self.nochBesuchendeStationen = [(20, 20, 3),  # Baecker
+                                            (30, 5, 2),  # Wurst
+                                            (0, 0, 0),  # Kaese
+                                            (30, 20, 3)]  # Kasse
             self.nochBesuchen = [1, 3, 0]
-
 
     def startShopping(self, argsList):
 
-        print("Customer" + self.name + " startet shopping at " + str(globalTimeCounter))
+        print(self.name + " startet shopping at " + str(globalTimeCounter))
         return self.goToStation([])
 
-
-
     def goToStation(self, argsList):
-        nextStation = self.nochBesuchen.pop(0)
+        self.nextStation = self.nochBesuchen.pop(0)
 
-        return globalTimeCounter + self.nochBesuchendeStationen[nextStation][0], \
-               5, \
-               next(eventNumber), \
-               self.startStation, \
-               [nextStation]
+        return [[globalTimeCounter + self.nochBesuchendeStationen[self.nextStation][0], \
+                 3, \
+                 next(eventNumber), \
+                 self.arriveAtStation, \
+                 [self.nextStation]]]
 
+    def arriveAtStation(self, argList):
+        currentStationIndex = argList[0]
+        currentStation = stations[currentStationIndex]
+
+        if len(currentStation.warteSchlange) < self.nochBesuchendeStationen[currentStationIndex][1]:
+            if currentStation.bedientGerade:
+                print(self.name + " queues at Station " + stations[argList[0]].name + " at time " + str(
+                    globalTimeCounter))
+                currentStation.warteSchlange.append(self)
+            else:
+                return self.startStation(argList)
+        else:
+            return self.goToStation(argList)
 
     def startStation(self, argList):
+        name = self.name
+        stationName = stations[self.nextStation].name
         print(self.name + " starts Station " + stations[argList[0]].name + " at time " + str(globalTimeCounter))
 
         currentStation = argList[0]
+        stations[currentStation].bedientGerade = True
 
         perProduct = stations[currentStation].abarbeitungsDauer
 
-        return globalTimeCounter + (perProduct * self.nochBesuchendeStationen[currentStation][2]),\
-               5,\
-               next(eventNumber),\
-               self.finishedAtStation,\
-               [currentStation]
+        return [[globalTimeCounter + (perProduct * self.nochBesuchendeStationen[currentStation][2]), \
+                 1, \
+                 next(eventNumber), \
+                 self.finishedAtStation, \
+                 [currentStation]]]
 
     def finishedAtStation(self, argList):
 
         print(self.name + " finished Station " + stations[argList[0]].name + " at time " + str(globalTimeCounter))
+        stations[argList[0]].bedientGerade = False
 
+        # TODO get next customer from
+        nextCustomerInQueueEvent = []
+        if len(stations[argList[0]].warteSchlange) > 0:
+            currentUser = stations[argList[0]].warteSchlange.pop(0)
+            tempList = currentUser.startStation([currentUser.nextStation])
+            for x in tempList:
+                for y in x:
+                    nextCustomerInQueueEvent.append(y)
 
         if len(self.nochBesuchen) == 0:
-            print(self.name + " finished shopping at "  + str(globalTimeCounter))
+            print(self.name + " finished shopping at " + str(globalTimeCounter))
             # TODO do not end the simulation if one customer is done
-            return -1, 10, 0, None, []
+            return [[-1, 10, 0, None, []]]
 
-        return self.goToStation([])
+        retVal = self.goToStation([])
+        retVal.append(nextCustomerInQueueEvent)
+        return retVal
 
 
 class Station:
@@ -94,10 +119,6 @@ class Station:
         self.abarbeitungsDauer = abarbeitungsDauer
         self.warteSchlange = []
         self.bedientGerade = False
-
-    def anstehen(self):
-
-        return
 
 
 class EventQueue:
@@ -118,16 +139,23 @@ class EventQueue:
     def start(self):
         global eventNumber
 
-
         kunde1 = Kunde("1 Typ1", 1)
-        kunde2 = Kunde("2 Typ1", 1)
-        kunde3 = Kunde("1 Typ2", 2)
-
         self.push([0, 5, next(eventNumber), kunde1.startShopping, []])
-        self.push([10, 5, next(eventNumber), kunde2.startShopping, []])
-        # self.push([0, 5, next(eventNumber), kunde3.startShopping, []])
 
+        kunde2 = Kunde("1 Typ2", 2)
+        self.push([1, 5, next(eventNumber), kunde2.startShopping, []])
 
+        kunde2 = Kunde("2 Typ2", 2)
+        self.push([61, 5, next(eventNumber), kunde2.startShopping, []])
+
+        kunde2 = Kunde("3 Typ2", 2)
+        self.push([121, 5, next(eventNumber), kunde2.startShopping, []])
+
+        kunde2 = Kunde("4 Typ2", 2)
+        self.push([181, 5, next(eventNumber), kunde2.startShopping, []])
+
+        kunde2 = Kunde("2 Typ1", 1)
+        self.push([200, 5, next(eventNumber), kunde2.startShopping, []])
 
         # TODO watch out for maxtime while trouble
         #   add max eventcount
@@ -138,10 +166,12 @@ class EventQueue:
 
             time, priority, eventNumber2, function, args = self.pop()
 
-
-            if time == -1:
+            if time == -1 and len(self.queue) == 0:
                 print("The End has been reached")
                 return
+
+            elif time == -1:
+                continue
 
             elif globalTimeCounter < time:
                 globalTimeCounter = globalTimeCounter + 1
@@ -149,17 +179,21 @@ class EventQueue:
                 continue
 
             else:
-                a, b ,c ,d , e = function(args)
-                self.push([a,b,c,d,e])
+                tmp = function(args)
+
+                if tmp is not None:
+                    for lst in tmp:
+                        if len(lst) != 0:
+                            self.push([lst[0], lst[1], lst[2], lst[3], lst[4]])
+
                 globalTimeCounter = globalTimeCounter + 1
 
 
-e = EventQueue()
-
+eventQ = EventQueue()
 
 stations = [Station("Baecker", 10),
             Station("Wurst", 30),
             Station("Kaese", 60),
             Station("Kasse", 5)]
 
-e.start()
+eventQ.start()
