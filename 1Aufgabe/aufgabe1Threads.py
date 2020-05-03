@@ -20,16 +20,8 @@ from time import sleep
 # Kaese     per article     60s
 # Kasse     per article     5s
 
-
-typ1Specs = [(10, 10, 10),  # Baecker
-             (30, 10, 5),  # Wurst
-             (45, 5, 3),  # Kaese
-             (60, 20, 30)]  # Kasse
-
-typ2Specs = [(20, 20, 3),  # Baecker
-             (30, 5, 2),  # Wurst
-             (0, 0, 0),  # Kaese
-             (30, 20, 3)]  # Kasse
+transactionList = []
+fullyServedCustomers = 0
 
 
 class Kunde(Thread):
@@ -38,11 +30,18 @@ class Kunde(Thread):
         Thread.__init__(self)
         self.name = name
         self.waitToBeServedEv = Event()
+        self.hasBeenFullyServed = True
         if id == 1:
-            self.nochBesuchendeStationen = typ1Specs
+            self.nochBesuchendeStationen = [(10, 10, 10),  # Baecker
+                                            (30, 10, 5),  # Wurst
+                                            (45, 5, 3),  # Kaese
+                                            (60, 20, 30)]  # Kasse
             self.nochBesuchen = [0, 1, 2, 3]
         else:
-            self.nochBesuchendeStationen = typ2Specs
+            self.nochBesuchendeStationen = [(20, 20, 3),  # Baecker
+                                            (30, 5, 2),  # Wurst
+                                            (0, 0, 0),  # Kaese
+                                            (30, 20, 3)]  # Kasse
             self.nochBesuchen = [1, 3, 0]
 
         self.nextStation = 0
@@ -57,15 +56,23 @@ class Kunde(Thread):
         currentStation = stations[self.nextStation]
 
         if currentStation.ownArrEv.is_set():
-            print(self.name + " queues at Station " + stations[self.nextStation].name + ".")
-
             # TODO check if queue is too long
-            currentStation.warteSchlange.append(self)
-            self.waitToBeServedEv.wait()
+            if len(currentStation.warteSchlange) < self.nochBesuchendeStationen[self.nextStation][1]:
+                print("customer: " + self.name + " queues at Station " + stations[self.nextStation].name + ".")
+                currentStation.warteSchlange.append(self)
+                self.waitToBeServedEv.wait()
+
+
+            else:
+                print("customer: " + self.name + " skips Station " + stations[self.nextStation].name + ".")
+                self.hasBeenFullyServed = False
+
+                return
 
         self.startStation()
 
     def startStation(self):
+
         currentStation = stations[self.nextStation]
         print("customer: " + self.name + " started at Station " + currentStation.name + ".")
 
@@ -80,15 +87,20 @@ class Kunde(Thread):
 
         print("customer: " + self.name + " finished at Station " + currentStation.name + ".")
 
-    # def finishedAtStation(self, argList):
-
     def run(self):
-        print("customer: " + self.name + " started.")
-        # sleep(waitAtBeginning)
+        print("customer: " + self.name + " arrived at the shop.")
+
+        # TODO globalTime might be reference, thus breaking this LOC
+        transactionList.append((globalTimeCounter, self.name, "Start", self.hasBeenFullyServed))
         while len(self.nochBesuchen) > 0:
             self.goToStation()
             self.arriveAtStation()
 
+        if self.hasBeenFullyServed:
+            global fullyServedCustomers
+            fullyServedCustomers = fullyServedCustomers + 1
+
+        transactionList.append((globalTimeCounter, self.name, "Finished", self.hasBeenFullyServed))
         print("customer: " + self.name + " finished shopping")
 
 
@@ -144,7 +156,7 @@ class Station(Thread):
 
 
 SLEEP_INTERVAL = 0.005
-SIMULATION_LENGTH = 1000
+SIMULATION_LENGTH = 1500
 globalTimeCounter = 0
 
 
@@ -177,14 +189,34 @@ print("main: started to sleep")
 for i in range(0, SIMULATION_LENGTH):
     print("CurrentTime: " + str(globalTimeCounter))
 
-    # if globalTimeCounter == 5:
-    #    startCustomer("2-Typ1", 1)
+    if globalTimeCounter == 3:
+        startCustomer("2-Typ1", 1)
+    if globalTimeCounter == 5:
+        startCustomer("3-Typ1", 1)
 
     sleep(SLEEP_INTERVAL)
     globalTimeCounter = globalTimeCounter + 1
 
 print("main: stopping all stations")
 globalStationStopEvent.set()
+
+(time, customer, station, fullyServed) = transactionList.pop()
+transactionList.append((time, customer, station, fullyServed))
+
+print("\tLast Serving: " + str(time) + "\n\tat station: " + station + "\n\tfrom customer: " + customer)
+print("\n")
+print("\tCustomers fully served: " + str(fullyServedCustomers))
+
+
+def hasBeenFullyServed(touple):
+    if touple[3] == "True":
+        return True
+    return False
+
+
+
+
+print("typ1 list\n" + str(list(filter(hasBeenFullyServed, transactionList))))
 
 sleep(2)
 print("main: killing main")
