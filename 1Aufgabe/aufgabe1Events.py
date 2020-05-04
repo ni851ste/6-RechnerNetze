@@ -22,16 +22,20 @@ import itertools
 
 eventNumber = itertools.count()
 globalTimeCounter = 0
+customerStartEndTimes = []
+customerCount = 0
 
 
 # TODO next(eventNumber)
 
 class Kunde:
 
-    def __init__(self, name, id):
+    def __init__(self, name, typId, startTime):
         self.name = name
         self.nextStation = []
-        if id == 1:
+        self.hasBeenFullyServed = True
+        self.startTime = startTime
+        if typId == 1:
             self.nochBesuchendeStationen = [(10, 10, 10),  # Baecker
                                             (30, 10, 5),  # Wurst
                                             (45, 5, 3),  # Kaese
@@ -45,7 +49,8 @@ class Kunde:
             self.nochBesuchen = [1, 3, 0]
 
     def startShopping(self, argsList):
-
+        global customerCount
+        customerCount = customerCount + 1
         print(self.name + " startet shopping at " + str(globalTimeCounter))
         return self.goToStation([])
 
@@ -70,11 +75,11 @@ class Kunde:
             else:
                 return self.startStation(argList)
         else:
+            self.hasBeenFullyServed = False
+            currentStation.customersThatSkippedCount = currentStation.customersThatSkippedCount + 1
             return self.goToStation(argList)
 
     def startStation(self, argList):
-        name = self.name
-        stationName = stations[self.nextStation].name
         print(self.name + " starts Station " + stations[argList[0]].name + " at time " + str(globalTimeCounter))
 
         currentStation = argList[0]
@@ -93,7 +98,6 @@ class Kunde:
         print(self.name + " finished Station " + stations[argList[0]].name + " at time " + str(globalTimeCounter))
         stations[argList[0]].bedientGerade = False
 
-        # TODO get next customer from
         nextCustomerInQueueEvent = []
         if len(stations[argList[0]].warteSchlange) > 0:
             currentUser = stations[argList[0]].warteSchlange.pop(0)
@@ -103,6 +107,7 @@ class Kunde:
                     nextCustomerInQueueEvent.append(y)
 
         if len(self.nochBesuchen) == 0:
+            customerStartEndTimes.append((self.name, globalTimeCounter - self.startTime, globalTimeCounter))
             print(self.name + " finished shopping at " + str(globalTimeCounter))
             # TODO do not end the simulation if one customer is done
             return [[-1, 10, 0, None, []]]
@@ -113,12 +118,12 @@ class Kunde:
 
 
 class Station:
-    # TODO Make stations every its own instance
     def __init__(self, name, abarbeitungsDauer):
         self.name = name
         self.abarbeitungsDauer = abarbeitungsDauer
         self.warteSchlange = []
         self.bedientGerade = False
+        self.customersThatSkippedCount = 0
 
 
 class EventQueue:
@@ -139,22 +144,22 @@ class EventQueue:
     def start(self):
         global eventNumber
 
-        kunde1 = Kunde("1 Typ1", 1)
+        kunde1 = Kunde("1 Typ1", 1, 0)
         self.push([0, 5, next(eventNumber), kunde1.startShopping, []])
 
-        kunde2 = Kunde("1 Typ2", 2)
+        kunde2 = Kunde("1 Typ2", 2, 1)
         self.push([1, 5, next(eventNumber), kunde2.startShopping, []])
 
-        kunde2 = Kunde("2 Typ2", 2)
+        kunde2 = Kunde("2 Typ2", 2, 61)
         self.push([61, 5, next(eventNumber), kunde2.startShopping, []])
 
-        kunde2 = Kunde("3 Typ2", 2)
+        kunde2 = Kunde("3 Typ2", 2, 121)
         self.push([121, 5, next(eventNumber), kunde2.startShopping, []])
 
-        kunde2 = Kunde("4 Typ2", 2)
+        kunde2 = Kunde("4 Typ2", 2, 181)
         self.push([181, 5, next(eventNumber), kunde2.startShopping, []])
 
-        kunde2 = Kunde("2 Typ1", 1)
+        kunde2 = Kunde("2 Typ1", 1, 200)
         self.push([200, 5, next(eventNumber), kunde2.startShopping, []])
 
         # TODO watch out for maxtime while trouble
@@ -162,7 +167,6 @@ class EventQueue:
         #   add max Time
         while len(self.queue) > 0:
             global globalTimeCounter
-            # print("Global Time: " + str(globalTimeCounter))
 
             time, priority, eventNumber2, function, args = self.pop()
 
@@ -197,3 +201,32 @@ stations = [Station("Baecker", 10),
             Station("Kasse", 5)]
 
 eventQ.start()
+
+# When last customer was served
+(customerName, timeTaken, endTime) = customerStartEndTimes.pop()
+customerStartEndTimes. append((customerName, timeTaken, endTime))
+
+print("Last customer served at time: " + str(endTime))
+
+# How much have been fully Served
+print("Customers fully served " + str(len(customerStartEndTimes)))
+
+# How long full shopping takes
+customerFullyServedCount = len(customerStartEndTimes)
+customerShoppingTimeSum = 0
+
+for i in range(len(customerStartEndTimes)):
+    (customerName, timeTaken, endTime) = customerStartEndTimes.pop(0)
+    customerStartEndTimes.append((customerName, timeTaken, endTime))
+    customerShoppingTimeSum = customerShoppingTimeSum + timeTaken
+
+print("Every Customer needed approx " + str(customerShoppingTimeSum/customerFullyServedCount))
+
+# percentage that skipped
+
+for station in stations:
+    print("At " + station.name + " " + str((station.customersThatSkippedCount/customerCount) * 10) + "% skipped.")
+
+
+
+

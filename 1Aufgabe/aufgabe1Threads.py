@@ -1,5 +1,5 @@
 import heapq
-from threading import Thread, Event
+from threading import Thread, Event, Lock
 from time import sleep
 
 # Kunde Typ 1       interStation    Schlange zu lang    wie viel kaufen
@@ -22,6 +22,7 @@ from time import sleep
 
 transactionList = []
 fullyServedCustomers = 0
+printLock = Lock()
 
 
 class Kunde(Thread):
@@ -55,8 +56,10 @@ class Kunde(Thread):
     def arriveAtStation(self):
         currentStation = stations[self.nextStation]
 
+        printLock.acquire()
+
         if currentStation.ownArrEv.is_set():
-            # TODO check if queue is too long
+
             if len(currentStation.warteSchlange) < self.nochBesuchendeStationen[self.nextStation][1]:
                 print("customer: " + self.name + " queues at Station " + stations[self.nextStation].name + ".")
                 currentStation.warteSchlange.append(self)
