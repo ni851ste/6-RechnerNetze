@@ -21,11 +21,12 @@ from operator import itemgetter
 # Kaese     per article     60s
 # Kasse     per article     5s
 
+newTyp1 = 1
+newTyp2 = 1
 transactionList = []
 fullyServedCustomers = 0
 printLock = Lock()
 customerCount = 0
-
 
 
 class Kunde(Thread):
@@ -59,7 +60,6 @@ class Kunde(Thread):
     def arriveAtStation(self):
         currentStation = stations[self.nextStation]
 
-        printLock.acquire()
 
         if currentStation.ownArrEv.is_set():
             if len(currentStation.warteSchlange) < self.nochBesuchendeStationen[self.nextStation][1]:
@@ -85,7 +85,6 @@ class Kunde(Thread):
         currentStation.serveTimeForNextCustomer = currentStation.timePerProduct * \
                                                   self.nochBesuchendeStationen[self.nextStation][2]
 
-
         currentStation.ownArrEv.set()
 
         print("customer: " + self.name + " is being served " + currentStation.name + ".")
@@ -93,13 +92,13 @@ class Kunde(Thread):
 
         print("customer: " + self.name + " finished at Station " + currentStation.name + ".")
 
+
     def run(self):
         print("customer: " + self.name + " arrived at the shop.")
         global customerCount
         customerCount = customerCount + 1
 
-
-        #transactionList.append((globalTimeCounter, self.name, "Start", self.hasBeenFullyServed))
+        # transactionList.append((globalTimeCounter, self.name, "Start", self.hasBeenFullyServed))
         startTime = globalTimeCounter
         while len(self.nochBesuchen) > 0:
             self.goToStation()
@@ -109,7 +108,7 @@ class Kunde(Thread):
             global fullyServedCustomers
             fullyServedCustomers = fullyServedCustomers + 1
 
-        #transactionList.append((globalTimeCounter, self.name, "Finished", self.hasBeenFullyServed))
+        # transactionList.append((globalTimeCounter, self.name, "Finished", self.hasBeenFullyServed))
         endTime = globalTimeCounter
         timeNeeded = endTime - startTime
         if self.hasBeenFullyServed:
@@ -143,11 +142,9 @@ class Station(Thread):
         exit(11)
 
     def serve(self):
-
         print("station: " + self.name + " started to serve.")
         ownSleep(self.serveTimeForNextCustomer)
         print("station: " + self.name + " finished to serve.")
-
         self.ownServEv.set()
 
         self.ownServEv.clear()
@@ -169,8 +166,10 @@ class Station(Thread):
             self.ownArrEv.clear()
 
 
-SLEEP_INTERVAL = 0.005
-SIMULATION_LENGTH = 1500
+
+SLEEP_INTERVAL = 0.002
+GEN_TIME = 1800
+SIMULATION_LENGTH = 3100
 globalTimeCounter = 0
 
 
@@ -196,20 +195,27 @@ stations = [Station("Baecker", 10),
 for stat in stations:
     stat.start()
 
-startCustomer("1-Typ1", 1)
+#startCustomer("1-Typ1", 1)
 
 print("main: started to sleep")
 
 for i in range(0, SIMULATION_LENGTH):
     print("CurrentTime: " + str(globalTimeCounter))
+    if (globalTimeCounter % 200) == 0 and globalTimeCounter < GEN_TIME:
+        startCustomer(str(newTyp1) + "-Typ1", 1)
+        newTyp1 = newTyp1 + 1
+    if (globalTimeCounter % 60) == 1 and globalTimeCounter < GEN_TIME:
+        startCustomer(str(newTyp2) + "-Typ2", 2)
+        newTyp2 = newTyp2 + 1
 
-    if globalTimeCounter == 3:
-        startCustomer("2-Typ1", 1)
-    if globalTimeCounter == 5:
-        startCustomer("3-Typ1", 1)
-
+    # if globalTimeCounter == 3:
+    #    startCustomer("2-Typ1", 1)
+    # if globalTimeCounter == 5:
+    #    startCustomer("3-Typ1", 1)
     sleep(SLEEP_INTERVAL)
     globalTimeCounter = globalTimeCounter + 1
+
+
 
 print("main: stopping all stations")
 globalStationStopEvent.set()
@@ -217,10 +223,8 @@ globalStationStopEvent.set()
 (customer, timeNeede, endTime) = transactionList.pop()
 transactionList.append((customer, timeNeede, endTime))
 
-
 # Last customer exited the shop
 lastShopper = max(transactionList, key=itemgetter(2))
-
 
 # How long full shopping takes
 customerFullyServedCount = len(transactionList)
@@ -232,13 +236,15 @@ for i in range(len(transactionList)):
 
 print("\tLast Station Serving: " + str(endTime) + "\tfrom customer: " + customer)
 
+print("\tAnzahl Kunden: " + str(customerCount))
+
 print("\tCustomers fully served: " + str(len(transactionList)))
 
-print("\tEvery Customer needed approx: " + str(customerShoppingTimeSum/customerFullyServedCount) + " seconds")
+print("\tEvery Customer needed approx: " + str(customerShoppingTimeSum / customerFullyServedCount) + " seconds")
 
-#How many % of customers skipped the station
+# How many % of customers skipped the station
 for station in stations:
-    print("\t\tAt " + station.name + " " + str((station.skipStationCount/customerCount) * 10) + "% skipped.")
+    print("\t\tAt " + station.name + " " + str((station.skipStationCount / customerCount) * 100)[0:4] + " % skipped.")
 
 print("\n")
 
