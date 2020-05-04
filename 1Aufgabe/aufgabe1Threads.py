@@ -1,6 +1,7 @@
 import heapq
 from threading import Thread, Event, Lock
 from time import sleep
+from operator import itemgetter
 
 # Kunde Typ 1       interStation    Schlange zu lang    wie viel kaufen
 # Baecker               10s             10                   10
@@ -23,6 +24,8 @@ from time import sleep
 transactionList = []
 fullyServedCustomers = 0
 printLock = Lock()
+customerCount = 0
+
 
 
 class Kunde(Thread):
@@ -59,7 +62,6 @@ class Kunde(Thread):
         printLock.acquire()
 
         if currentStation.ownArrEv.is_set():
-
             if len(currentStation.warteSchlange) < self.nochBesuchendeStationen[self.nextStation][1]:
                 print("customer: " + self.name + " queues at Station " + stations[self.nextStation].name + ".")
                 currentStation.warteSchlange.append(self)
@@ -68,6 +70,7 @@ class Kunde(Thread):
 
             else:
                 print("customer: " + self.name + " skips Station " + stations[self.nextStation].name + ".")
+                currentStation.skipStationCount = currentStation.skipStationCount + 1
                 self.hasBeenFullyServed = False
 
                 return
@@ -82,7 +85,7 @@ class Kunde(Thread):
         currentStation.serveTimeForNextCustomer = currentStation.timePerProduct * \
                                                   self.nochBesuchendeStationen[self.nextStation][2]
 
-        # TODO setting when coming from Q may have a bad outcome
+
         currentStation.ownArrEv.set()
 
         print("customer: " + self.name + " is being served " + currentStation.name + ".")
@@ -92,9 +95,12 @@ class Kunde(Thread):
 
     def run(self):
         print("customer: " + self.name + " arrived at the shop.")
+        global customerCount
+        customerCount = customerCount + 1
 
-        # TODO globalTime might be reference, thus breaking this LOC
-        transactionList.append((globalTimeCounter, self.name, "Start", self.hasBeenFullyServed))
+
+        #transactionList.append((globalTimeCounter, self.name, "Start", self.hasBeenFullyServed))
+        startTime = globalTimeCounter
         while len(self.nochBesuchen) > 0:
             self.goToStation()
             self.arriveAtStation()
@@ -103,18 +109,23 @@ class Kunde(Thread):
             global fullyServedCustomers
             fullyServedCustomers = fullyServedCustomers + 1
 
-        transactionList.append((globalTimeCounter, self.name, "Finished", self.hasBeenFullyServed))
+        #transactionList.append((globalTimeCounter, self.name, "Finished", self.hasBeenFullyServed))
+        endTime = globalTimeCounter
+        timeNeeded = endTime - startTime
+        if self.hasBeenFullyServed:
+            transactionList.append((self.name, timeNeeded, endTime))
         print("customer: " + self.name + " finished shopping")
 
 
 class Station(Thread):
-    # TODO Make stations every its own instance
+
     def __init__(self, name, timePerProduct):
         print(name + " started to init.")
         Thread.__init__(self)
         self.name = name
         self.timePerProduct = timePerProduct
         self.serveTimeForNextCustomer = 0
+        self.skipStationCount = 0
 
         self.warteSchlange = []
         self.bedientGerade = False
@@ -132,7 +143,7 @@ class Station(Thread):
         exit(11)
 
     def serve(self):
-        # TODO how much articles are bought
+
         print("station: " + self.name + " started to serve.")
         ownSleep(self.serveTimeForNextCustomer)
         print("station: " + self.name + " finished to serve.")
@@ -203,23 +214,33 @@ for i in range(0, SIMULATION_LENGTH):
 print("main: stopping all stations")
 globalStationStopEvent.set()
 
-(time, customer, station, fullyServed) = transactionList.pop()
-transactionList.append((time, customer, station, fullyServed))
+(customer, timeNeede, endTime) = transactionList.pop()
+transactionList.append((customer, timeNeede, endTime))
 
-print("\tLast Serving: " + str(time) + "\n\tat station: " + station + "\n\tfrom customer: " + customer)
+
+# Last customer exited the shop
+lastShopper = max(transactionList, key=itemgetter(2))
+
+
+# How long full shopping takes
+customerFullyServedCount = len(transactionList)
+customerShoppingTimeSum = 0
+for i in range(len(transactionList)):
+    (customerName, timeTaken, endTime) = transactionList.pop(0)
+    transactionList.append((customerName, timeTaken, endTime))
+    customerShoppingTimeSum = customerShoppingTimeSum + timeTaken
+
+print("\tLast Station Serving: " + str(endTime) + "\tfrom customer: " + customer)
+
+print("\tCustomers fully served: " + str(len(transactionList)))
+
+print("\tEvery Customer needed approx: " + str(customerShoppingTimeSum/customerFullyServedCount) + " seconds")
+
+#How many % of customers skipped the station
+for station in stations:
+    print("\t\tAt " + station.name + " " + str((station.skipStationCount/customerCount) * 10) + "% skipped.")
+
 print("\n")
-print("\tCustomers fully served: " + str(fullyServedCustomers))
-
-
-def hasBeenFullyServed(touple):
-    if touple[3] == "True":
-        return True
-    return False
-
-
-
-
-print("typ1 list\n" + str(list(filter(hasBeenFullyServed, transactionList))))
 
 sleep(2)
 print("main: killing main")
