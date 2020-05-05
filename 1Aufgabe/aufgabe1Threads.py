@@ -1,4 +1,3 @@
-import heapq
 from threading import Thread, Event, Lock
 from time import sleep
 from operator import itemgetter
@@ -25,7 +24,6 @@ newTyp1 = 1
 newTyp2 = 1
 transactionList = []
 fullyServedCustomers = 0
-printLock = Lock()
 customerCount = 0
 
 
@@ -60,21 +58,30 @@ class Kunde(Thread):
     def arriveAtStation(self):
         currentStation = stations[self.nextStation]
 
-
+        currentStation.waitQueueLock.acquire()
+        # Someone is already at the station
         if currentStation.ownArrEv.is_set():
+
+            # Gets in Queue
             if len(currentStation.warteSchlange) < self.nochBesuchendeStationen[self.nextStation][1]:
                 print("customer: " + self.name + " queues at Station " + stations[self.nextStation].name + ".")
                 currentStation.warteSchlange.append(self)
+                currentStation.waitQueueLock.release()
                 self.waitToBeServedEv.wait()
 
-
+            # Skips station
             else:
+                currentStation.waitQueueLock.release()
                 print("customer: " + self.name + " skips Station " + stations[self.nextStation].name + ".")
                 currentStation.skipStationCount = currentStation.skipStationCount + 1
                 self.hasBeenFullyServed = False
 
                 return
 
+        else:
+            currentStation.waitQueueLock.release()
+
+        # Case if noone is at the Station
         self.startStation()
 
     def startStation(self):
@@ -109,10 +116,10 @@ class Kunde(Thread):
             fullyServedCustomers = fullyServedCustomers + 1
 
         # transactionList.append((globalTimeCounter, self.name, "Finished", self.hasBeenFullyServed))
-        endTime = globalTimeCounter
-        timeNeeded = endTime - startTime
+        endTimeTmp = globalTimeCounter
+        timeNeeded = endTimeTmp - startTime
         if self.hasBeenFullyServed:
-            transactionList.append((self.name, timeNeeded, endTime))
+            transactionList.append((self.name, timeNeeded, endTimeTmp))
         print("customer: " + self.name + " finished shopping")
 
 
@@ -131,6 +138,7 @@ class Station(Thread):
         self.ownArrEv = Event()
         self.ownServEv = Event()
         self.nextInQueue = Event()
+        self.waitQueueLock = Lock()
 
     def waitForCustomer(self):
         while not globalStationStopEvent.is_set():
@@ -156,14 +164,20 @@ class Station(Thread):
             self.waitForCustomer()
             self.serve()
 
+            self.waitQueueLock.acquire()
+            # TODO Gets next from waitQueue
             while len(self.warteSchlange) > 0:
                 nextCustomer = self.warteSchlange.pop(0)
+                self.waitQueueLock.release()
                 nextCustomer.waitToBeServedEv.set()
                 nextCustomer.waitToBeServedEv.clear()
 
                 self.serve()
+                self.waitQueueLock.acquire()
 
             self.ownArrEv.clear()
+            self.waitQueueLock.release()
+
 
 
 
@@ -220,8 +234,8 @@ for i in range(0, SIMULATION_LENGTH):
 print("main: stopping all stations")
 globalStationStopEvent.set()
 
-(customer, timeNeede, endTime) = transactionList.pop()
-transactionList.append((customer, timeNeede, endTime))
+(customer, timeNeeded, endTime) = transactionList.pop()
+transactionList.append((customer, timeNeeded, endTime))
 
 # Last customer exited the shop
 lastShopper = max(transactionList, key=itemgetter(2))
