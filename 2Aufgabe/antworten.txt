@@ -1,0 +1,43 @@
+
+3)
+	1.
+		TCP, UDP, RTCP, TLSv1.2, DNS, SSDP, MDNS, HTTP
+	
+	2.
+		0,07 sec
+		
+	3.
+		eigene:		192.168.0.165
+					50:3e:aa:ed:1e:13
+					
+		Server:		5.189.147.109:9000
+					34:2c:c4:16:f3:1e
+					
+					
+		http://scratchpads.eu/explore/sites-list
+		34:2c:c4:16:f3:1e
+		
+		Netzknoten?????
+		
+	4.
+		eth:ethertype:ip:tcp:http
+		eth:ethertype:ip:tcp:http:data-text-lines
+		
+		
+		
+4)
+	1.
+		14 - Ethernet
+		20 - IP
+		20 - TCP
+		
+	2.
+		Quell:	38 22 d6 67 19 00
+		Ziel:	00 21 cc 63 82 2c 
+		
+	3.	Quell:	8d 25 1d 5d 
+		Ziel:	5b c6 ae c0 
+		
+	4.	Quell:	e2 26 
+		Ziel:	00 50 
+	
