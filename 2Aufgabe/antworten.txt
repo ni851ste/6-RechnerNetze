@@ -35,9 +35,54 @@
 		Quell:	38 22 d6 67 19 00
 		Ziel:	00 21 cc 63 82 2c 
 		
-	3.	Quell:	8d 25 1d 5d 
-		Ziel:	5b c6 ae c0 
+	3.	Quell:	80 06 40 66 8d 25 1d 5d 5b c6 ae c0 e2 26 00 50
+		Ziel:	4f 4c 29 24 72 ce 3c d4 50 18 40 b0 62 e7 00 00
+
 		
-	4.	Quell:	e2 26 
-		Ziel:	00 50 
+	4.	Quell:	e2 26 -> 57894
+		Ziel:	00 50 -> 80
+		
+		
+5)
+	1.
+		tcp.port == 80
+		
+	2.
+		Nein, der TCP Port wird für mehr Traffic genutzt als nur HTTP.
+		Und HTTP benutzt benutzt manchmal den 9000 Port.
 	
+	3.
+		Request muss vom Typ HTTP sein und darf nicht den UDP 1900 Port benutzen.
+		
+	4.
+		ip.dst==192.168.0.165
+		
+6)
+	1.
+		Upstream: 	40 Pakete
+		Downstream: 96 Pakete
+		
+	2.
+		Upstream: 	40 *  108,25 = 4.330 Byte
+		Downstream: 96 * 1393,15 = 133.742,4 Byte
+		
+	3. 
+		Von einer: 128.65.210.182
+		
+	4.
+		Von einem Port: 
+		Source	: 443
+		Dest	: 51791
+		
+		
+7)
+	Am Anfang werden einmal viele Daten übertragen. Danach gleichbleibend sehr wenig.
+	Aber dafür regelmäßig alle 10 Sekunden einmal mehr.
+		
+		
+		
+		
+		
+		
+		
+		
