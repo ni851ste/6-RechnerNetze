@@ -21,7 +21,7 @@ class TcpPortScanner(Thread):
             print("Connecting to " + str(self.port))
 
             sock.connect((Server_IP, self.port))
-            print("Connecting worked on port " + str(self.port))
+            print("TCP: Connecting worked on port " + str(self.port))
             sock.send("MESSAGE".encode('utf-8'))
 
         except socket.timeout:
@@ -44,7 +44,7 @@ class UdpPortScanner(Thread):
 
             sock.sendto("MESSAGE".encode('utf-8'), (Server_IP, self.port))
             data, addr = sock.recvfrom(1024)
-            print('received message: ' + data.decode('utf-8') + ' from ', addr)
+            print('UDP Port ' + str(self.port) +': received message: ' + data.decode('utf-8') + ' from ', addr)
 
         except socket.timeout:
             print("No answer recieved " + str(self.port))
