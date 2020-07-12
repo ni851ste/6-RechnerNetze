@@ -5,6 +5,8 @@ import sys
 
 ownIp = '127.0.0.1'
 scanMessageTag = "<scan>"
+buddyList = []
+
 
 
 txt = input("Please specify <Name> and <Port> of your chat client!\n")
@@ -26,26 +28,47 @@ receiveSock.settimeout(20)
 
 
 
-
-
 class Sender(Thread):
 
     def __init__(self):
         Thread.__init__(self)
 
     def run(self):
+        global buddyList
         while True:
-            txt = input("Type message you want to send!\n"
-                        "<Port> <Message>\n")
-            targetPort = int(txt.split(" ")[0])
+            txt = input("S  -> Scan for others\n"
+                        "L  -> List Buddies\n"
+                        "C  -> Chat to <BuddyName> <Message>\n")
 
-            sendSock = setupSendingSocket()
+            inputComponents = txt.split(" ")
 
-            sendSock.connect((ownIp, targetPort))
-            msg = ownName + " " + txt
-            sendSock.send(msg.encode("utf-8"))
-            time.sleep(0.1)
-            sendSock.close()
+            if inputComponents[0].upper() == "S":
+                buddyList = scanForOtherClients()
+                print("Scanned ports and found " + str(len(buddyList)))
+            elif inputComponents[0].upper() == "L":
+                for buddy in buddyList:
+                    print(buddy)
+
+
+
+            elif inputComponents[0].upper() == "C":
+                receiverName = inputComponents[1]
+                receiverPort = 0
+
+                for buddy in buddyList:
+                    if buddy[0] == receiverName:
+                        receiverPort = int(buddy[2])
+
+                sendSock = setupSendingSocket()
+
+                sendSock.connect((ownIp, receiverPort))
+                msg = ownName + " " + txt
+                sendSock.send(msg.encode("utf-8"))
+                time.sleep(0.1)
+                sendSock.close()
+
+            print("\n")
+
 
 
 
@@ -75,11 +98,11 @@ class Receiver(Thread):
                     else:
                         splitMessage = data.split(" ")
                         message = ""
-                        for i in range(2, len(splitMessage)):
+                        for i in range(3, len(splitMessage)):
                             message += splitMessage[i] + " "
 
 
-                        print("Message from: ", splitMessage[0])
+                        print("┌------", splitMessage[0])
                         print("|\t", message)
                         print("\n")
                         # print("Connection closed.\n\n")
@@ -97,7 +120,7 @@ def scanForOtherClients():
             scanSock.connect((ownIp, port))
             scanSock.send(scanMessageTag.encode("utf-8"))
             msg = scanSock.recv(1024).decode('utf-8')
-            lst.append(msg)
+            lst.append(msg.split(" "))
         except:
             continue
             # print("Connection denied.")
@@ -109,11 +132,7 @@ def scanForOtherClients():
 receiver = Receiver()
 receiver.start()
 
-clientList = scanForOtherClients()
-print("Found other clients at:")
-for entry in clientList:
-    print(entry)
-print("\n\n")
+
 
 sender = Sender()
 sender.start()
