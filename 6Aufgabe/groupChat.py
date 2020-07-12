@@ -26,7 +26,7 @@ receiveSock.listen(3)
 receiveSock.settimeout(20)
 
 
-
+# ToDo when scanning names and ports should be exchanged
 
 class Sender(Thread):
 
@@ -38,18 +38,18 @@ class Sender(Thread):
         while True:
             txt = input("S  -> Scan for others\n"
                         "L  -> List Buddies\n"
-                        "C  -> Chat to <BuddyName> <Message>\n")
+                        "C  -> Chat to <BuddyName> <Message>\n"
+                        "G  -> send <Message> to every buddy\n")
 
             inputComponents = txt.split(" ")
 
             if inputComponents[0].upper() == "S":
                 buddyList = scanForOtherClients()
                 print("Scanned ports and found " + str(len(buddyList)))
+
             elif inputComponents[0].upper() == "L":
                 for buddy in buddyList:
                     print(buddy)
-
-
 
             elif inputComponents[0].upper() == "C":
                 receiverName = inputComponents[1]
@@ -66,6 +66,23 @@ class Sender(Thread):
                 sendSock.send(msg.encode("utf-8"))
                 time.sleep(0.1)
                 sendSock.close()
+
+            elif inputComponents[0].upper() == "G":
+                receivingPorts = []
+                for buddy in buddyList:
+                    receivingPorts.append(int(buddy[2]))
+
+                for port in receivingPorts:
+                    sendSock = setupSendingSocket()
+
+                    sendSock.connect((ownIp, port))
+                    # please dont mind this shitty code
+                    msg = ownName + " " + "placeholder" + " " + txt
+                    sendSock.send(msg.encode("utf-8"))
+                    time.sleep(0.1)
+                    sendSock.close()
+
+
 
             print("\n")
 
