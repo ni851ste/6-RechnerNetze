@@ -1,11 +1,15 @@
 import socket
 import time
-from threading import Thread
-import sys
+from threading import Thread, Event
+import _thread
+import sys, os
 
 ownIp = '127.0.0.1'
 scanMessageTag = "<scan>"
+quitTag = "<quit>"
 buddyList = []
+
+quitEvent = Event()
 
 
 
@@ -26,6 +30,13 @@ receiveSock.listen(3)
 receiveSock.settimeout(20)
 
 
+def setupSendingSocket():
+
+    sendSock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sendSock.settimeout(5)
+    return sendSock
+
+
 
 class Sender(Thread):
 
@@ -38,7 +49,8 @@ class Sender(Thread):
             txt = input("S  -> Scan for others\n"
                         "L  -> List Buddies\n"
                         "C  -> Chat to <BuddyName> <Message>\n"
-                        "G  -> send <Message> to every buddy\n")
+                        "G  -> Send <Message> to every buddy\n"
+                        "Q  -> Close the Chat\n")
 
             inputComponents = txt.split(" ")
 
@@ -81,7 +93,22 @@ class Sender(Thread):
                     time.sleep(0.1)
                     sendSock.close()
 
+            elif inputComponents[0].upper() == "Q":
+                receivingPorts = []
+                for buddy in buddyList:
+                    if buddy[0] == ownName:
+                        continue
+                    receivingPorts.append(int(buddy[2]))
 
+                for port in receivingPorts:
+                    sendSock = setupSendingSocket()
+
+                    sendSock.connect((ownIp, port))
+                    msg = quitTag + " " + ownName
+                    sendSock.send(msg.encode("utf-8"))
+                    time.sleep(0.1)
+                    sendSock.close()
+                quitEvent.set()
 
             print("\n")
 
@@ -111,11 +138,30 @@ class Receiver(Thread):
 
                     if data.startswith(scanMessageTag):
                         receivedScanMessage = data.split(" ")
-                        buddyList.append([receivedScanMessage[1], receivedScanMessage[2], receivedScanMessage[3]])
-                        # Print updated buddy List
-                        print("Scan Request received and added a new buddy.")
+
+                        alreadyContainsBuddy = False
+                        for buddy in buddyList:
+                            if buddy[0] == receivedScanMessage[1]:
+                                alreadyContainsBuddy = True
+
+                        if not alreadyContainsBuddy:
+                            buddyList.append([receivedScanMessage[1], receivedScanMessage[2], receivedScanMessage[3]])
+                            # Print updated buddy List
+                            print("Scan Request received and added a new buddy.")
 
                         conn.send((ownName + " " + str(ownIp) + " " + str(ownPort)).encode("utf-8"))
+
+                    elif data.startswith(quitTag):
+                        receivedQuitMessage = data.split(" ")
+                        quittingChatter = receivedQuitMessage[1]
+
+                        print(quittingChatter + " left the chatroom.")
+
+                        for i in range(0, len(buddyList) - 1):
+                            if buddyList[i][0] == quittingChatter:
+                                del buddyList[i]
+
+
                     else:
                         splitMessage = data.split(" ")
                         message = ""
@@ -147,6 +193,7 @@ def scanForOtherClients():
             continue
             # print("Connection denied.")
 
+        scanSock.close()
     return lst
 
 
@@ -159,14 +206,13 @@ receiver.start()
 sender = Sender()
 sender.start()
 
+while True:
+    if quitEvent.is_set():
+        os._exit(0)
+        break
 
 
 
 
 
 
-def setupSendingSocket():
-
-    sendSock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sendSock.settimeout(5)
-    return sendSock
