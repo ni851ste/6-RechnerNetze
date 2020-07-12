@@ -26,7 +26,6 @@ receiveSock.listen(3)
 receiveSock.settimeout(20)
 
 
-# ToDo when scanning names and ports should be exchanged
 
 class Sender(Thread):
 
@@ -111,6 +110,11 @@ class Receiver(Thread):
                         conn.close()
 
                     if data.startswith(scanMessageTag):
+                        receivedScanMessage = data.split(" ")
+                        buddyList.append([receivedScanMessage[1], receivedScanMessage[2], receivedScanMessage[3]])
+                        # Print updated buddy List
+                        print("Scan Request received and added a new buddy.")
+
                         conn.send((ownName + " " + str(ownIp) + " " + str(ownPort)).encode("utf-8"))
                     else:
                         splitMessage = data.split(" ")
@@ -135,7 +139,8 @@ def scanForOtherClients():
 
         try:
             scanSock.connect((ownIp, port))
-            scanSock.send(scanMessageTag.encode("utf-8"))
+            scanMessage = scanMessageTag + " " + ownName + " " + str(ownIp) + " " + str(ownPort)
+            scanSock.send(scanMessage.encode("utf-8"))
             msg = scanSock.recv(1024).decode('utf-8')
             lst.append(msg.split(" "))
         except:
