@@ -73,6 +73,7 @@ class Sender(Thread):
                 sendSock = setupSendingSocket()
 
                 sendSock.connect((ownIp, receiverPort))
+                # txt contains target Port as first Word
                 msg = ownName + " " + txt
                 sendSock.send(msg.encode("utf-8"))
                 time.sleep(0.1)
@@ -88,7 +89,7 @@ class Sender(Thread):
 
                     sendSock.connect((ownIp, port))
                     # please dont mind this shitty code
-                    msg = ownName + " " + "placeholder" + " " + txt
+                    msg = ownName + " " + "<group>" + " " + txt
                     sendSock.send(msg.encode("utf-8"))
                     time.sleep(0.1)
                     sendSock.close()
